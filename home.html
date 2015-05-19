@@ -1,3 +1,10 @@
-<span>{{message}}</span>
+<div ng-controller="account_details">
+    <dl>
+        <dt>Account ID</dt>
+        <dd ng-bind="account_id"></dd>
+        <dt>Secret</dt>
+        <dd ng-bind="secret"></dd>
+    </dl>
+</div>
 
-<a ng-click="testMe()" href="#">Test Me</a>
+<a ng-click="testMe()" href="#">Create a spaceship</a>
