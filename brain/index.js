@@ -19,7 +19,6 @@ requireConf([
 
   (async () => {
     populateAuth()
-    await sync()
 
     const { rows } = await db.allDocs({
       include_docs: true,
@@ -33,11 +32,13 @@ requireConf([
     renderDoc(index)
     renderDoc(focus)
 
-    setTimeout(function() {
+    setTimeout(async function() {
+      await sync()
+
       docs.forEach(d => {
         if (d._id !== 'index' && d._id !== 'focus-list') renderDoc(d)
       })
-    }, 200);
+    }, 100);
   })()
 
   async function sync() {
