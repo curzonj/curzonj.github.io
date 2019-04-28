@@ -223,8 +223,8 @@ requireConf([
   const maxPreWidth = 100;
   function getPreWidthMem() {
     if (!widthMem) {
-      widthMem = (getWidth() - 32)/8
-      //widthMem = Math.min(widthMem, maxPreWidth)
+      widthMem = Math.floor((getWidth() - 48)/8)
+      widthMem = Math.min(widthMem, maxPreWidth)
     }
 
     return widthMem
