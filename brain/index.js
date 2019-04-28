@@ -5,13 +5,11 @@ const requireConf = requirejs.config({
   }
 })
 
-/*
 if('serviceWorker' in navigator) {
   navigator.serviceWorker
            .register('sw.js')
            .then(function() { console.log("Service Worker Registered"); });
 }
-*/
 
 requireConf([
   "https://unpkg.com/pouchdb@7.0.0/dist/pouchdb.min.js",
@@ -22,7 +20,6 @@ requireConf([
   (async () => {
     populateAuth()
     await sync()
-    console.log(await db.info())
 
     const { rows } = await db.allDocs({
       include_docs: true,
@@ -106,7 +103,7 @@ requireConf([
   }
 
   function spanIfNeeded(doc) {
-    if (doc.what !== doc._id) return `<span id="${doc.what}"></span>`
+    return (doc.what !== doc._id) ? `<span id="${doc.what}"></span>` : ""
   }
 
   function getWidth() {
