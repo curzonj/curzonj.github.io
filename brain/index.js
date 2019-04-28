@@ -26,9 +26,18 @@ requireConf([
     })
     const docs = rows.flatMap(r => r.doc)
 
-    var div = document.createElement("div");
-    div.innerHTML = render(docs)
-    document.body.appendChild(div);
+    const front = docs.filter(d => d._id === 'index' || d._id === 'focus-list')
+    const index = front.find(d => d._id === 'index')
+    const focus = front.find(d => d._id === 'focus-list')
+
+    renderDoc(index)
+    renderDoc(focus)
+
+    setTimeout(function() {
+      docs.forEach(d => {
+        if (d._id !== 'index' && d._id !== 'focus-list') renderDoc(d)
+      })
+    }, 200);
   })()
 
   async function sync() {
@@ -76,30 +85,106 @@ requireConf([
     document.body.appendChild(div);
   }
 
-  function render(docs) {
-    return `
-      <pre><code><a href="#focus-list">focus-list</a></code></pre>
-      ${list(docs).join("\n")}
-    `
+  function wrapLink(l) {
+    return `#L#${l}#L#`
   }
 
-  function list(docs) {
-    return docs.flatMap(doc => {
-      if (!doc.what) {
-        doc.what = `list_of: ${doc.list_of}`
-      }
-      if (doc.related) {
-        doc.related = stringToList(doc.related).flatMap(r => `#A#${r}#A#`)
-      }
+  function wrapAnchor(l) {
+    return `#A#${l}#A#`
+  }
 
-      const coded = sortedYaml(doc).replace(/#A#([^#]+)#A#/g, '<a href="#$1">$1</a>')
+  function convertRelated(doc) {
+    if (doc.related) {
+      if (typeof doc.related === "string") {
+        doc.related = wrapAnchor(doc.related)
+      } else {
+        doc.related = doc.related.flatMap(r => wrapAnchor(r))
+      }
+    }
+  }
 
-      return `
-        ${spanIfNeeded(doc)}
-        <h3 id="${doc._id}">${doc.what}</h3>
-        <pre>${coded}</pre>
-      `
-    })
+  function convertLinks(doc) {
+    if (doc.links) {
+      doc.links = doc.links.flatMap(l => {
+        if (typeof l === "string") {
+          return wrapLink(l)
+        }
+
+        if (l.link) {
+          l.link = wrapLink(l.link)
+        }
+
+        if (l.search && !l.site) {
+          l.search = `<a target="_blank" href="https://google.com/search?q=${encodeURIComponent(l.search)}">${l.search}</a>`
+        }
+
+        return l
+      })
+    }
+  }
+
+  function convertThought(doc) {
+    convertLinks(doc)
+    convertRelated(doc)
+    if (doc.more) doc.more.forEach(convertThought)
+
+    if (!doc.src) return
+
+    if (typeof doc.src === "string") {
+      if (!doc.src.startsWith("http"))  return
+      doc.src = wrapLink(doc.src)
+    } else if (doc.src.link) {
+      doc.src.link = wrapLink(doc.src.link)
+    }
+  }
+
+  function convertTopic(doc) {
+    convertLinks(doc)
+    convertRelated(doc)
+
+    if (doc.books) {
+      doc.books.forEach(b => {
+        if (b.link) {
+          b.link = wrapLink(b.link)
+        }
+      })
+    }
+
+    if (doc.todo) doc.todo.forEach(convertThought)
+    if (doc.list) doc.list.forEach(convertThought)
+    if (doc.thoughts) doc.thoughts.forEach(convertThought)
+    if (doc.topics) {
+      doc.topics = doc.topics.flatMap(t => {
+        if (typeof t === "string") {
+          return wrapAnchor(t)
+        } else {
+          convertTopic(t)
+          return t
+        }
+      })
+    }
+  }
+
+  function renderDoc(doc) {
+    if (!doc.what) {
+      doc.what = `list_of: ${doc.list_of}`
+    }
+
+    convertTopic(doc)
+
+    const coded = sortedYaml(doc).
+      replace(/#A#(.+?)#A#/g, '<a href="#$1">$1</a>').
+      replace(/#L#(.+?)#L#/g, '<a target="_blank" href="$1">$1</a>')
+
+    var node = document.createElement("div");
+    node.id = doc._id
+    node.innerHTML = `
+      ${spanIfNeeded(doc)}
+      <h3>${doc.what}</h3>
+      <pre>${coded}</pre>
+    `
+
+    document.body.appendChild(node);
   }
 
   function spanIfNeeded(doc) {
